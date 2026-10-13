@@ -1,0 +1,10 @@
+{
+  "description": "Displays an animated 3D waiting screen with typing name feature for online multiplayer chess games enhancing user engagement during matchmaking.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
