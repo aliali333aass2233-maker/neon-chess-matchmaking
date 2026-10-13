@@ -1,4 +1,4 @@
-import { CSSProperties, FormEvent, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useState } from "react";
 
 type ChessPiece = {
   id: string;
@@ -18,7 +18,24 @@ const pieces: ChessPiece[] = [
   ...whiteBackRank.map((symbol, col) => ({ id: `w-${col}`, symbol, side: "light" as const, row: 7, col })),
 ];
 
-function ChessBoard({ label, variant }: { label: string; variant: "left" | "right" }) {
+const movingSquares: Record<string, [number, number][]> = {
+  "w-6": [[7, 6], [5, 5], [3, 4], [5, 5]],
+  "b-1": [[0, 1], [2, 2], [4, 3], [2, 2]],
+  "wp-3": [[6, 3], [4, 3], [4, 3], [5, 3]],
+  "bp-4": [[1, 4], [3, 4], [3, 4], [2, 4]],
+};
+
+function ChessBoard({
+  label,
+  variant,
+  searching,
+  move,
+}: {
+  label: string;
+  variant: "left" | "right";
+  searching: boolean;
+  move: number;
+}) {
   return (
     <div className={`board-stage ${variant}`}>
       <div className="board-glow" />
@@ -33,9 +50,12 @@ function ChessBoard({ label, variant }: { label: string; variant: "left" | "righ
 
           <div className="pieces" aria-label={label}>
             {pieces.map((piece) => {
+              const square = searching && movingSquares[piece.id]
+                ? movingSquares[piece.id][move]
+                : [piece.row, piece.col];
               const style = {
-                "--row": piece.row,
-                "--col": piece.col,
+                "--row": square[0],
+                "--col": square[1],
               } as CSSProperties;
 
               return (
@@ -58,6 +78,15 @@ function ChessBoard({ label, variant }: { label: string; variant: "left" | "righ
 export default function App() {
   const [username, setUsername] = useState("");
   const [searching, setSearching] = useState(false);
+  const [move, setMove] = useState(0);
+
+  useEffect(() => {
+    if (!searching) return;
+    const interval = window.setInterval(() => {
+      setMove((current) => (current + 1) % 4);
+    }, 1800);
+    return () => window.clearInterval(interval);
+  }, [searching]);
 
   function findOpponent(event: FormEvent) {
     event.preventDefault();
@@ -67,7 +96,7 @@ export default function App() {
   return (
     <main className={`scene ${searching ? "searching" : ""}`}>
       <div className="boards">
-        <ChessBoard label="Left chess board" variant="left" />
+        <ChessBoard label="Left chess board" variant="left" searching={searching} move={move} />
 
         {searching && (
           <svg className="connections" viewBox="0 -120 400 240" aria-hidden="true">
@@ -91,12 +120,18 @@ export default function App() {
           </svg>
         )}
 
-        <ChessBoard label="Right chess board" variant="right" />
+        <div className={`network-core ${searching ? "active" : ""}`} aria-hidden="true">
+          <span className="network-ring network-ring-one" />
+          <span className="network-ring network-ring-two" />
+          <span className="network-ring network-ring-three" />
+          <img src="/network-chess.png" alt="" />
+        </div>
+
+        <ChessBoard label="Right chess board" variant="right" searching={searching} move={move} />
       </div>
 
       <form className="matchmaking" onSubmit={findOpponent}>
         <div className="username-field">
-          <span>@</span>
           <input
             value={username}
             onChange={(event) => {
@@ -111,9 +146,7 @@ export default function App() {
         </div>
         <button type="submit" disabled={!username.trim() || searching}>
           {searching ? (
-            <span className="finding-label">
-              FINDING OPPONENT <i /><i /><i />
-            </span>
+            <span className="finding-label">FINDING OPPONENT</span>
           ) : (
             "FIND OPPONENT"
           )}
